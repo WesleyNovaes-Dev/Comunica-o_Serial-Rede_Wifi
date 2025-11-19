@@ -1,4 +1,4 @@
-# Gateway IoT: Comunicação Serial/USB em Rede para Balanças Industriais
+# Gateway IoT: Comunicação Serial/USB em Rede para Balanças 
 
 > **Projeto de Conclusão de Curso - Engenharia da Computação (Facens)**
 > **Autores:** Johanna Bernecker, Pedro Henrique Garcia Silveira, Wesley Davi Zanon Novaes.
