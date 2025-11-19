@@ -1,130 +1,137 @@
 # Gateway IoT: Comunicação Serial/USB em Rede para Balanças Industriais
 
-Este projeto consiste em um **Gateway IoT de baixo custo** desenvolvido para conectar balanças industriais (via RS-232/USB) diretamente à rede corporativa (Wi-Fi). O sistema utiliza um **ESP32** para capturar dados de pesagem, filtrar redundâncias e transmiti-los via TCP para um servidor ou sistema ERP, automatizando o processo de coleta de dados.
+> **Projeto de Conclusão de Curso - Engenharia da Computação (Facens)**
+> [cite_start]**Autores:** Johanna Bernecker, Pedro Henrique Garcia Silveira, Wesley Davi Zanon Novaes[cite: 206, 207, 208].
 
-Inclui validação de backend utilizando **Node.js** para registro de pesagens em arquivo CSV.
+![Badge ESP32](https://img.shields.io/badge/Hardware-ESP32-red) ![Badge NodeJS](https://img.shields.io/badge/Backend-Node.js-green) ![Badge Protocol](https://img.shields.io/badge/Protocol-TCP%2FIP-blue)
+
+Este projeto apresenta um **Gateway IoT de baixo custo** desenvolvido para conectar balanças industriais (interface RS-232/USB) à rede corporativa (Wi-Fi). [cite_start]O sistema utiliza um microcontrolador ESP32 para capturar dados de pesagem, filtrar redundâncias e transmiti-los via TCP para um servidor ou sistema ERP, eliminando a necessidade de apontamentos manuais[cite: 260].
 
 ---
 
 ## 📑 Índice
-1. [Visão Geral do Projeto](#visão-geral-do-projeto)
-2. [Hardware e Requisitos](#hardware-e-requisitos)
-3. [Funcionamento do Firmware](#funcionamento-do-firmware)
-4. [Instalação e Configuração](#instalação-e-configuração)
-5. [Tutorial de Uso (Backend)](#tutorial-de-uso-backend)
-6. [Estrutura de Dados e Protocolos](#estrutura-de-dados-e-protocolos)
-7. [Resultados e Performance](#resultados-e-performance)
-8. [Parâmetros Configuráveis](#parâmetros-configuráveis)
+
+1. [Visão Geral e Objetivos](#-visão-geral-e-objetivos)
+2. [Arquitetura de Hardware](#-arquitetura-de-hardware)
+3. [Funcionamento do Sistema](#-funcionamento-do-sistema)
+4. [Instalação e Configuração](#-instalação-e-configuração)
+5. [Resultados e Performance](#-resultados-e-performance)
+6. [Viabilidade Econômica](#-viabilidade-econômica)
 
 ---
 
-## 🔭 Visão Geral do Projeto
+## 🔭 Visão Geral e Objetivos
 
-O objetivo principal é eliminar a coleta manual de dados de balanças que possuem apenas interfaces locais (Serial DB9 ou USB). O ESP32 atua como uma ponte transparente e inteligente.
+O objetivo principal é modernizar balanças legadas que possuem apenas interfaces locais (Serial DB9 ou USB), integrando-as à **Indústria 4.0** sem o alto custo de substituição do equipamento.
 
-* **Núcleo:** ESP32 (Dual Core, Wi-Fi integrado).
-* **Interface:** Leitura Serial RS-232 convertida para TTL.
-* **Conectividade:** Suporte a redes WPA2-Pessoal e **WPA2-Enterprise** (Corporativo).
-* **Eficiência:** Algoritmo de "Line Change Detection" que reduz o tráfego de rede ao enviar apenas alterações de peso.
-* **Resiliência:** Gerenciamento automático de reconexão Wi-Fi sem perda de estado.
-
----
-
-## 🛠 Hardware e Requisitos
-
-### Lista de Componentes
-* **Microcontrolador:** ESP32 DevKitC V4 (ou similar).
-* **Conversor de Nível:** Módulo MAX3232 (RS232 ↔ TTL). Necessário para converter os sinais de ±12V da balança para os 3.3V do ESP32.
-* **Fonte de Alimentação:** 5V (para o MAX3232) e 3.3V (para o ESP32) ou fonte USB comum.
-* **Cabeamento:** Conector DB9 (fêmea/macho conforme a balança) e Jumpers.
-* **Balança:** Qualquer balança industrial com saída serial (Ex: Toledo Prix).
-
-### Diagrama de Conexão (Pinagem)
-
-Abaixo, a tabela de conexão entre a balança, o conversor e o ESP32:
-
-| Componente Origem | Pino Origem | Componente Destino | Pino Destino (ESP32) | Descrição |
-| :--- | :--- | :--- | :--- | :--- |
-| **Balança (DB9)** | TX (Transmissão) | **MAX3232** | RX (Entrada RS232) | Sinal vindo da balança |
-| **Balança (DB9)** | GND | **MAX3232** | GND | Terra comum |
-| **MAX3232** | VCC | **Fonte** | 3.3V ou 5V | Alimentação do módulo |
-| **MAX3232** | GND | **ESP32** | GND | Terra comum |
-| **MAX3232** | TX (Saída TTL) | **ESP32** | **GPIO 16 (RX2)** | Entrada de dados no MCU |
-| **MAX3232** | RX (Entrada TTL) | **ESP32** | **GPIO 17 (TX2)** | Envio de comandos (se houver) |
+**Principais Funcionalidades:**
+* [cite_start]**Conectividade Universal:** Suporte a redes WPA2-Pessoal e **WPA2-Enterprise** (Corporativo)[cite: 145].
+* [cite_start]**Configuração Web:** Interface embarcada (SoftAP) para configuração de Wi-Fi e IP (DHCP ou Estático)[cite: 536].
+* [cite_start]**Otimização de Dados:** Algoritmo *LineChangeDetector* que reduz o tráfego de rede em 90% ao enviar apenas alterações de peso[cite: 767].
+* [cite_start]**Resiliência:** Reconexão automática em caso de falha de rede sem perda de pacotes[cite: 932].
 
 ---
 
-## 🧠 Funcionamento do Firmware
+## 🛠 Arquitetura de Hardware
 
-O firmware foi desenvolvido em C++ (Arduino IDE) e opera em uma máquina de estados para garantir estabilidade:
+[cite_start]O projeto foi validado utilizando a balança **Toledo Prix 9094 Plus** e o seguinte hardware[cite: 718, 737]:
 
-1.  **Inicialização:** Tenta conectar ao último Wi-Fi salvo na memória não volátil.
-2.  **Modo AP (Falha de Conexão):** Se não conseguir conectar, cria o Ponto de Acesso **"ESP32_Config"**.
-    * Interface Web disponível em `http://192.168.4.1`.
-    * Permite configurar SSID, Senha, Usuário (Enterprise), IP Estático/DHCP.
-3.  **Modo Operacional (Conectado):**
-    * Monitora a porta `Serial2`.
-    * **Filtragem:** Aplica o algoritmo `LineChangeDetector`. Se o peso lido for idêntico ao anterior, o dado é descartado. Se mudar, é processado.
-    * **Servidor TCP:** Escuta na porta **9000**.
-    * **Transmissão:** Envia o dado filtrado para todos os clientes conectados.
-4.  **Falha de Rede:** Se o Wi-Fi cair, o envio TCP para imediatamente (evita travamento) e o LED pisca até a reconexão automática.
+| Componente | Função |
+| :--- | :--- |
+| **ESP32 DevKitC V4** | Núcleo de processamento e conectividade Wi-Fi. |
+| **Módulo MAX3232** | Conversor de níveis de tensão RS232 (±12V) para TTL (3.3V). |
+| **Fonte de Alimentação** | Fonte externa 5V/3.3V para estabilidade do circuito. |
+| **Conector DB9** | Interface física com a balança. |
+
+### Diagrama de Conexões (Pinout)
+
+[cite_start]As conexões entre o módulo conversor e o ESP32 utilizam a porta `Serial2`[cite: 492]:
+
+| Pino ESP32 | Função | Conexão no MAX3232 |
+| :--- | :--- | :--- |
+| **GPIO 16 (RX2)** | Receber Dados (RX) | Pino TX (TTL) |
+| **GPIO 17 (TX2)** | Transmitir Dados (TX) | Pino RX (TTL) |
+| **GND** | Aterramento | GND |
+| **VCC (3.3V)** | Alimentação | VCC |
+
+---
+
+## 🧠 Funcionamento do Sistema
+
+[cite_start]O firmware opera em uma máquina de estados[cite: 502]:
+
+1.  **Inicialização:** Tenta conectar ao último Wi-Fi salvo.
+2.  [cite_start]**Modo AP (Configuração):** Se falhar, cria a rede `ESP32_Config` (IP 192.168.4.1) para configuração via navegador[cite: 532].
+3.  **Modo Operação:**
+    * Lê a porta Serial RS-232.
+    * Aplica o filtro de dados repetidos.
+    * [cite_start]Abre um Servidor TCP na porta **9000**[cite: 658].
+    * Transmite dados limpos para o backend (Node.js).
 
 ---
 
 ## ⚙️ Instalação e Configuração
 
-### Passo 1: Preparar o Firmware
-1.  Instale o **Arduino IDE** e as bibliotecas do ESP32.
-2.  Abra o código fonte.
-3.  Verifique a linha de inicialização da serial:
+### 1. Firmware (ESP32)
+1.  Abra o projeto no **Arduino IDE**.
+2.  Certifique-se de que as bibliotecas `WiFi.h`, `Preferences.h` e `WebServer.h` estão instaladas.
+3.  Ajuste o *Baud Rate* da serial conforme sua balança (ex: 9600 ou 115200) no arquivo principal:
     ```cpp
-    Serial2.begin(9600, SERIAL_8N1, 16, 17); // Ajuste 9600 conforme sua balança
+    SerialRS232.begin(115200, SERIAL_8N1, RS232_RX, RS232_TX); [cite_start]// [cite: 655]
     ```
-4.  Compile e faça o upload para a placa.
+4.  Compile e carregue na placa.
 
-### Passo 2: Configuração via Interface Web
-No primeiro uso (ou se mudar de rede):
-1.  Conecte seu computador/celular à rede Wi-Fi: `ESP32_Config`.
-2.  Abra o navegador e acesse: **http://192.168.4.1**.
-3.  Preencha os campos:
-    * **SSID/Senha:** Da sua rede local.
-    * **Modo IP:** DHCP (automático) ou Estático (recomendado para servidores).
-    * **Admin Password:** Defina uma senha para proteger esta tela.
-4.  Clique em **Salvar**. O ESP32 irá reiniciar.
-5.  Observe o Monitor Serial (ou verifique no roteador) o IP atribuído (ex: `192.168.0.105`).
+### 2. Configuração de Rede
+1.  Conecte-se à rede Wi-Fi **ESP32_Config**.
+2.  Acesse `http://192.168.4.1`.
+3.  [cite_start]Configure o SSID, Senha e escolha entre **DHCP** ou **IP Estático**[cite: 614].
+4.  O dispositivo reiniciará e mostrará o IP obtido no Monitor Serial.
 
----
-
-## 💻 Tutorial de Uso (Backend)
-
-Para validar o recebimento dos dados, utilizamos um script em **Node.js**.
-
-### Pré-requisitos
-* Node.js v10 ou superior instalado.
-
-### Execução
-1.  Baixe o arquivo `coleta_de_dados.js` deste repositório.
-2.  Edite o arquivo para apontar para o IP do seu ESP32:
+### 3. Backend (Node.js)
+Para capturar os dados no computador/servidor:
+1.  Instale o Node.js.
+2.  Configure o IP do ESP32 no script `coleta_de_dados.js`:
     ```javascript
-    const HOST = '192.168.0.105'; // Coloque o IP do ESP32 aqui
-    const PORT = 9000;
+    const BALANCA_IP = '10.128.32.8'; [cite_start]// [cite: 678]
+    const BALANCA_PORTA = 9000;
     ```
-3.  Abra o terminal na pasta do arquivo e execute:
-    ```bash
-    node coleta_de_dados.js
-    ```
-4.  **Resultado:** O script criará o arquivo `pesagens.csv` e começará a popular com os dados recebidos em tempo real.
+3.  Execute o script: `node coleta_de_dados.js`.
+4.  [cite_start]Os dados serão salvos automaticamente no arquivo `pesagens.csv`[cite: 710].
 
 ---
 
-## 📊 Estrutura de Dados e Protocolos
+## 📊 Resultados e Performance
 
-### 1. Dados Brutos (Origem: Balança)
-Exemplo de string típica enviada por balanças (ex: Toledo):
-* `I` = Instável (Peso variando)
-* `E` = Estável (Peso fixo)
+### Otimização de Tráfego
+O sistema implementa filtragem inteligente. [cite_start]A tabela abaixo (baseada nos testes do TCC) demonstra que dados repetidos (balança estável) não consomem banda de rede[cite: 762].
 
-```text
-I00.005
-I00.015
-E00.060
+| Estado | Dado Bruto | Ação do Gateway | Resultado |
+| :--- | :--- | :--- | :--- |
+| Instável | `I00.005` | Envia | Dado registrado no servidor |
+| Instável | `I00.035` | Envia | Dado registrado no servidor |
+| **Estável** | `E00.060` | **Envia** | Dado registrado (Peso Final) |
+| **Estável** | `E00.060` | **Filtra** | **Nenhum pacote enviado (Economia)** |
+
+### Latência
+[cite_start]A latência média medida entre a leitura do peso e o registro no servidor foi de **~48ms**, viabilizando aplicações em tempo real[cite: 974, 978].
+
+| Métrica | Valor Médio |
+| :--- | :--- |
+| Latência Média | 48.75 ms |
+| Perda de Pacotes | 0% |
+| Tempo máx. sem falhas | 3h contínuas |
+
+---
+
+## 💰 Viabilidade Econômica
+
+Um dos maiores diferenciais do projeto é o custo reduzido em comparação com a modernização oferecida pelos fabricantes de balanças.
+
+| Solução | Custo Estimado (R$) | Descrição |
+| :--- | :--- | :--- |
+| **Gateway IoT (Este Projeto)** | **R$ 120,68** | [cite_start]Solução flexível, código aberto e Wi-Fi[cite: 737]. |
+| Modernização Comercial (Ethernet) | R$ 1.990,10 | [cite_start]Kit proprietário do fabricante[cite: 742]. |
+| **Economia** | [cite_start]**~93%** | [cite: 744] |
+
+---
+[cite_start]*Trabalho desenvolvido no Centro Universitário Facens, Sorocaba/SP - 2025.* [cite: 217]
