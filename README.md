@@ -1,11 +1,11 @@
 # Gateway IoT: Comunicação Serial/USB em Rede para Balanças Industriais
 
 > **Projeto de Conclusão de Curso - Engenharia da Computação (Facens)**
-> [cite_start]**Autores:** Johanna Bernecker, Pedro Henrique Garcia Silveira, Wesley Davi Zanon Novaes[cite: 206, 207, 208].
+> **Autores:** Johanna Bernecker, Pedro Henrique Garcia Silveira, Wesley Davi Zanon Novaes.
 
 ![Badge ESP32](https://img.shields.io/badge/Hardware-ESP32-red) ![Badge NodeJS](https://img.shields.io/badge/Backend-Node.js-green) ![Badge Protocol](https://img.shields.io/badge/Protocol-TCP%2FIP-blue)
 
-Este projeto apresenta um **Gateway IoT de baixo custo** desenvolvido para conectar balanças industriais (interface RS-232/USB) à rede corporativa (Wi-Fi). [cite_start]O sistema utiliza um microcontrolador ESP32 para capturar dados de pesagem, filtrar redundâncias e transmiti-los via TCP para um servidor ou sistema ERP, eliminando a necessidade de apontamentos manuais[cite: 260].
+Este projeto apresenta um **Gateway IoT de baixo custo** desenvolvido para conectar balanças industriais (interface RS-232/USB) à rede corporativa (Wi-Fi). O sistema utiliza um microcontrolador ESP32 para capturar dados de pesagem, filtrar redundâncias e transmiti-los via TCP para um servidor ou sistema ERP, eliminando a necessidade de apontamentos manuais.
 
 ---
 
@@ -25,16 +25,16 @@ Este projeto apresenta um **Gateway IoT de baixo custo** desenvolvido para conec
 O objetivo principal é modernizar balanças legadas que possuem apenas interfaces locais (Serial DB9 ou USB), integrando-as à **Indústria 4.0** sem o alto custo de substituição do equipamento.
 
 **Principais Funcionalidades:**
-* [cite_start]**Conectividade Universal:** Suporte a redes WPA2-Pessoal e **WPA2-Enterprise** (Corporativo)[cite: 145].
-* [cite_start]**Configuração Web:** Interface embarcada (SoftAP) para configuração de Wi-Fi e IP (DHCP ou Estático)[cite: 536].
-* [cite_start]**Otimização de Dados:** Algoritmo *LineChangeDetector* que reduz o tráfego de rede em 90% ao enviar apenas alterações de peso[cite: 767].
-* [cite_start]**Resiliência:** Reconexão automática em caso de falha de rede sem perda de pacotes[cite: 932].
+* **Conectividade Universal:** Suporte a redes WPA2-Pessoal e **WPA2-Enterprise** (Corporativo).
+* **Configuração Web:** Interface embarcada (SoftAP) para configuração de Wi-Fi e IP (DHCP ou Estático).
+* **Otimização de Dados:** Algoritmo *LineChangeDetector* que reduz o tráfego de rede em 90% ao enviar apenas alterações de peso.
+* **Resiliência:** Reconexão automática em caso de falha de rede sem perda de pacotes.
 
 ---
 
 ## 🛠 Arquitetura de Hardware
 
-[cite_start]O projeto foi validado utilizando a balança **Toledo Prix 9094 Plus** e o seguinte hardware[cite: 718, 737]:
+O projeto foi validado utilizando a balança **Toledo Prix 9094 Plus** e o seguinte hardware:
 
 | Componente | Função |
 | :--- | :--- |
@@ -45,7 +45,7 @@ O objetivo principal é modernizar balanças legadas que possuem apenas interfac
 
 ### Diagrama de Conexões (Pinout)
 
-[cite_start]As conexões entre o módulo conversor e o ESP32 utilizam a porta `Serial2`[cite: 492]:
+As conexões entre o módulo conversor e o ESP32 utilizam a porta `Serial2`:
 
 | Pino ESP32 | Função | Conexão no MAX3232 |
 | :--- | :--- | :--- |
@@ -58,14 +58,14 @@ O objetivo principal é modernizar balanças legadas que possuem apenas interfac
 
 ## 🧠 Funcionamento do Sistema
 
-[cite_start]O firmware opera em uma máquina de estados[cite: 502]:
+O firmware opera em uma máquina de estados:
 
 1.  **Inicialização:** Tenta conectar ao último Wi-Fi salvo.
-2.  [cite_start]**Modo AP (Configuração):** Se falhar, cria a rede `ESP32_Config` (IP 192.168.4.1) para configuração via navegador[cite: 532].
+2.  **Modo AP (Configuração):** Se falhar, cria a rede `ESP32_Config` (IP 192.168.4.1) para configuração via navegador.
 3.  **Modo Operação:**
     * Lê a porta Serial RS-232.
     * Aplica o filtro de dados repetidos.
-    * [cite_start]Abre um Servidor TCP na porta **9000**[cite: 658].
+    * Abre um Servidor TCP na porta **9000**.
     * Transmite dados limpos para o backend (Node.js).
 
 ---
@@ -77,14 +77,14 @@ O objetivo principal é modernizar balanças legadas que possuem apenas interfac
 2.  Certifique-se de que as bibliotecas `WiFi.h`, `Preferences.h` e `WebServer.h` estão instaladas.
 3.  Ajuste o *Baud Rate* da serial conforme sua balança (ex: 9600 ou 115200) no arquivo principal:
     ```cpp
-    SerialRS232.begin(115200, SERIAL_8N1, RS232_RX, RS232_TX); [cite_start]// [cite: 655]
+    SerialRS232.begin(115200, SERIAL_8N1, RS232_RX, RS232_TX); //
     ```
 4.  Compile e carregue na placa.
 
 ### 2. Configuração de Rede
 1.  Conecte-se à rede Wi-Fi **ESP32_Config**.
 2.  Acesse `http://192.168.4.1`.
-3.  [cite_start]Configure o SSID, Senha e escolha entre **DHCP** ou **IP Estático**[cite: 614].
+3.  Configure o SSID, Senha e escolha entre **DHCP** ou **IP Estático**.
 4.  O dispositivo reiniciará e mostrará o IP obtido no Monitor Serial.
 
 ### 3. Backend (Node.js)
@@ -92,18 +92,18 @@ Para capturar os dados no computador/servidor:
 1.  Instale o Node.js.
 2.  Configure o IP do ESP32 no script `coleta_de_dados.js`:
     ```javascript
-    const BALANCA_IP = '10.128.32.8'; [cite_start]// [cite: 678]
+    const BALANCA_IP = '10.128.32.8'; 
     const BALANCA_PORTA = 9000;
     ```
 3.  Execute o script: `node coleta_de_dados.js`.
-4.  [cite_start]Os dados serão salvos automaticamente no arquivo `pesagens.csv`[cite: 710].
+4.  Os dados serão salvos automaticamente no arquivo `pesagens.csv`.
 
 ---
 
 ## 📊 Resultados e Performance
 
 ### Otimização de Tráfego
-O sistema implementa filtragem inteligente. [cite_start]A tabela abaixo (baseada nos testes do TCC) demonstra que dados repetidos (balança estável) não consomem banda de rede[cite: 762].
+O sistema implementa filtragem inteligente. A tabela abaixo (baseada nos testes do TCC) demonstra que dados repetidos (balança estável) não consomem banda de rede.
 
 | Estado | Dado Bruto | Ação do Gateway | Resultado |
 | :--- | :--- | :--- | :--- |
@@ -113,7 +113,7 @@ O sistema implementa filtragem inteligente. [cite_start]A tabela abaixo (baseada
 | **Estável** | `E00.060` | **Filtra** | **Nenhum pacote enviado (Economia)** |
 
 ### Latência
-[cite_start]A latência média medida entre a leitura do peso e o registro no servidor foi de **~48ms**, viabilizando aplicações em tempo real[cite: 974, 978].
+A latência média medida entre a leitura do peso e o registro no servidor foi de **~48ms**, viabilizando aplicações em tempo real.
 
 | Métrica | Valor Médio |
 | :--- | :--- |
@@ -129,9 +129,9 @@ Um dos maiores diferenciais do projeto é o custo reduzido em comparação com a
 
 | Solução | Custo Estimado (R$) | Descrição |
 | :--- | :--- | :--- |
-| **Gateway IoT (Este Projeto)** | **R$ 120,68** | [cite_start]Solução flexível, código aberto e Wi-Fi[cite: 737]. |
-| Modernização Comercial (Ethernet) | R$ 1.990,10 | [cite_start]Kit proprietário do fabricante[cite: 742]. |
-| **Economia** | [cite_start]**~93%** | [cite: 744] |
+| **Gateway IoT (Este Projeto)** | **R$ 120,68** | Solução flexível, código aberto e Wi-Fi. |
+| Modernização Comercial (Ethernet) | R$ 1.990,10 | Kit proprietário do fabricante. |
+| **Economia** | **~93%**  |
 
 ---
-[cite_start]*Trabalho desenvolvido no Centro Universitário Facens, Sorocaba/SP - 2025.* [cite: 217]
+*Trabalho desenvolvido no Centro Universitário Facens, Sorocaba/SP - 2025.
